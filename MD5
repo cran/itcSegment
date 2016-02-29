@@ -1,0 +1,14 @@
+93a65be220960842e4971ae2a3655f6e *DESCRIPTION
+61e92f0e1d92b75cc8d061c01bbcc592 *NAMESPACE
+7b1e9541a5d75e8d0571b6ee8f336887 *R/imgData.R
+d08a0e2a31a00bd86a0c20b13f7f98d8 *R/itcIMG.R
+e19ae48ddbd3a50bae5cc987cd873b74 *R/itcLiDAR.R
+e5c651bd7e8bba57ab603ca0757c432e *R/lasData.R
+035f12be41b6d389b155ea102c579c89 *R/otsu.R
+d7a62bb1a01aad43283189247f956a7d *data/imgData.rda
+6ae6dfab6bb814c6bf5d4a762ee5ba0e *data/lasData.rda
+faea89d7d9fe3397ec22224546eaf318 *man/imgData.Rd
+e64327be67ff21ff6dd7e7c1db536810 *man/itcIMG.Rd
+40a589e3efc339a0b7aa3c823e9e30a6 *man/itcLiDAR.Rd
+48c30b8003ab73151c03c13e89091f49 *man/lasData.Rd
+736dcc1552ca1b7dd4b5c559861cc195 *vignettes/ictSegment.Rmd

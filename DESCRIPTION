@@ -1,0 +1,16 @@
+Package: itcSegment
+Type: Package
+Title: Individual Tree Crowns Segmentation
+Version: 0.1
+Date: 2016-02-26
+Author: Michele Dalponte
+Maintainer: Michele Dalponte <michele.dalponte@fmach.it>
+Description: Two methods for Individual Tree Crowns (ITCs) delineation on remote sensing data: one is based on LiDAR data in x,y,z format and one on imagery data in raster format.
+License: GPL
+LazyData: TRUE
+Depends: R (>= 3.2.0),sp,raster,maptools,rgeos,methods,grDevices
+RoxygenNote: 5.0.1
+NeedsCompilation: no
+Packaged: 2016-02-29 08:41:45 UTC; VPCF2
+Repository: CRAN
+Date/Publication: 2016-02-29 18:39:49
