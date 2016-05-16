@@ -4,11 +4,13 @@
 \alias{itcIMG}
 \title{Individual Tree Crowns segmentation with imagery data}
 \usage{
-itcIMG(imagery = NULL, searchWinSize = 3, TRESHSeed = 0.45,
-  TRESHCrown = 0.55, DIST = 10, specT = 0)
+itcIMG(imagery = NULL, epsg = NULL, searchWinSize = 3, TRESHSeed = 0.45,
+  TRESHCrown = 0.55, DIST = 10, th = 0, ischm = FALSE)
 }
 \arguments{
-\item{imagery}{An object of class raster on which to perform the segmentation}
+\item{imagery}{An object of class raster on which to perform the segmentation. The image should be projected.}
+
+\item{epsg}{The EPSG code of the reference system of the image.}
 
 \item{searchWinSize}{Size (in pixels) of the moving window used to the detect the local maxima. It should be an odd number larger than 3.}
 
@@ -18,10 +20,12 @@ itcIMG(imagery = NULL, searchWinSize = 3, TRESHSeed = 0.45,
 
 \item{DIST}{Maximum value of the crown diameter of a detected tree (in meters).}
 
-\item{specT}{Spectral value below which a point cannot be a local maxima.}
+\item{th}{Digital number value below which a pixel cannot be a local maxima.}
+
+\item{ischm}{TRUE if the imagery is a Canopy Height Model (CHM). Default: FALSE.}
 }
 \value{
-An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The data frame contains a column representing the area of each crown (CA_m2).
+An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m;  only if ischm=TRUE) and its crown area in square meters (CA_m2).
 }
 \description{
 The ITC delineation approach finds local maxima within an imagery, designates these as tree tops, then uses a decision tree method to grow individual crowns around the local maxima.
@@ -30,7 +34,7 @@ The ITC delineation approach finds local maxima within an imagery, designates th
 \dontrun{
 data(imgData)
 
-se<-itcIMG(imgData)
+se<-itcIMG(imgData,epsg=32632)
 summary(se)
 plot(se,axes=T)
 

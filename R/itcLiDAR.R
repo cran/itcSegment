@@ -4,7 +4,7 @@
 #' @param X A column vector of x coordinates.
 #' @param Y A column vector of y coordinates (it must have the same length as X).
 #' @param Z A column vector of z coordinates (it must have the same length as X). Z must be normalized respect to the ground.
-#' @param epsg The EPSG code of the reference system of the X,Y coordinates. Default: 4326 (lat long WGS 84)
+#' @param epsg The EPSG code of the reference system of the X,Y coordinates.
 #' @param resolution The resolution of the raster on which the first segmentation is carried out.
 #' @param MinSearchFilSize Minimum size (in pixels) of the moving window used to the detect the local maxima. It should be an odd number larger than 3.
 #' @param MaxSearchFilSize Maximum size (in pixels) of the moving window used to the detect the local maxima. It should be bigger or equal to MinSearchFilSize, and it should be an odd number larger than 3.
@@ -13,7 +13,7 @@
 #' @param minDIST Minimum value of the crown diameter of a detected tree (in meters).
 #' @param maxDIST Maximum value of the crown diameter of a detected tree (in meters). It should be bigger or equal to minDIST.
 #' @param HeightThreshold Minimum height of the trees.
-#' @return An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in sqaure meters (CA_m2).
+#' @return An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in square meters (CA_m2).
 #' @import sp
 #' @import raster
 #' @import maptools
@@ -21,7 +21,7 @@
 #' @import methods
 #' @import grDevices
 #' @export itcLiDAR
-#' @references M. Dalponte, F. Reyes, K. Kandare, and D. Gianelle, "Delineation of Individual Tree Crowns from ALS and Hyperspectral data: a comparison among four methods," European Journal of Remote Sensing, Vol. 48, pp. 365-382, 2015.
+#' @references M. Dalponte, and D. A. Coomes, "Tree-centric mapping of forest carbon density from airborne laser scanning and hyperspectral data," Methods in Ecology and Evolution, doi: 10.1111/2041-210X.12575
 #' @examples
 #' \dontrun{
 #' data(lasData)
@@ -39,7 +39,7 @@
 #'
 #' }
 
-itcLiDAR<-function(X=NULL,Y=NULL,Z=NULL, epsg=4326 , resolution=0.5, MinSearchFilSize=3, MaxSearchFilSize=7,TRESHSeed=0.55,TRESHCrown=0.6,minDIST=5,maxDIST=40,HeightThreshold=2){
+itcLiDAR<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL , resolution=0.5, MinSearchFilSize=3, MaxSearchFilSize=7,TRESHSeed=0.55,TRESHCrown=0.6,minDIST=5,maxDIST=40,HeightThreshold=2){
 
   filtro<-function(x){
     if (is.na(x[5])){
@@ -50,6 +50,65 @@ itcLiDAR<-function(X=NULL,Y=NULL,Z=NULL, epsg=4326 , resolution=0.5, MinSearchFi
     }else{
       return<-x[5]
     }
+  }
+
+  otsu <- function(y){
+
+    m=1
+
+    yvals <- sort(unique(y))
+    L <- length(yvals)
+    per <- as.vector(table(y)) / length(y)
+
+    P <- matrix(0, nrow=L, ncol=L)
+    S <- matrix(0, nrow=L, ncol=L)
+    H <- matrix(0, nrow=L, ncol=L)
+
+    P[1,] <- cumsum(per)
+    S[1,] <- cumsum(per * yvals[1:L])
+    for(u in 2:L)
+      for(v in u:L){
+        P[u,v] <- P[1,v] - P[1,u-1]
+        S[u,v] <- S[1,v] - S[1,u-1]
+      }
+    H <- S^2 / P
+
+
+    x <- seq(L)
+    n <- length(x)
+    if (n -1 < m)
+      stop("The number of thresholds is larger than the unique values minus 1.")
+    e <- 0
+    h <- m
+    a <- 1:m
+    rule <- c(0, a, L)
+    sigma2 <- sum(sapply(1:(m+1), function(i) H[rule[i]+1, rule[i+1]]))
+
+    thresh <- yvals[a]
+    nmmp1 <- n - m + 1
+    mp1 <- m + 1
+    while (a[1] != nmmp1) {
+      if (e < n - h) {
+        h <- 1
+        e <- a[m]
+        j <- 1
+      }
+      else {
+        h <- h + 1
+        e <- a[mp1 - h]
+        j <- 1:h
+      }
+      a[m - h + j] <- e + j
+      if(a[m] != L){
+        rule <- c(0, a, L)
+        new <- sum(sapply(1:(m+1), function(i) H[rule[i]+1, rule[i+1]]))
+        if(new > sigma2){
+          sigma2 <- new
+          thresh <- yvals[a]
+        }
+      }
+    }
+    thresh
   }
 
   if (MinSearchFilSize>=3 & MaxSearchFilSize>=3){

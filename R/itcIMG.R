@@ -1,13 +1,15 @@
 #' @title Individual Tree Crowns segmentation with imagery data
 #' @author Michele Dalponte
 #' @description The ITC delineation approach finds local maxima within an imagery, designates these as tree tops, then uses a decision tree method to grow individual crowns around the local maxima.
-#' @param imagery An object of class raster on which to perform the segmentation
+#' @param imagery An object of class raster on which to perform the segmentation. The image should be projected.
+#' @param epsg The EPSG code of the reference system of the image.
 #' @param searchWinSize Size (in pixels) of the moving window used to the detect the local maxima. It should be an odd number larger than 3.
 #' @param TRESHSeed Growing threshold 1. It should be between 0 and 1.
 #' @param TRESHCrown Growing threshold 2. It should be between 0 and 1.
 #' @param DIST Maximum value of the crown diameter of a detected tree (in meters).
-#' @param specT Spectral value below which a point cannot be a local maxima.
-#' @return An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The data frame contains a column representing the area of each crown (CA_m2).
+#' @param th Digital number value below which a pixel cannot be a local maxima.
+#' @param ischm TRUE if the imagery is a Canopy Height Model (CHM). Default: FALSE.
+#' @return An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m;  only if ischm=TRUE) and its crown area in square meters (CA_m2).
 #' @import sp
 #' @import raster
 #' @import maptools
@@ -20,7 +22,7 @@
 #' \dontrun{
 #' data(imgData)
 #'
-#' se<-itcIMG(imgData)
+#' se<-itcIMG(imgData,epsg=32632)
 #' summary(se)
 #' plot(se,axes=T)
 #'
@@ -28,7 +30,7 @@
 #'
 #' }
 
-itcIMG<-function(imagery=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCrown=0.55, DIST=10, specT=0){
+itcIMG<-function(imagery=NULL,epsg=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCrown=0.55, DIST=10, th=0, ischm=FALSE){
 
   if (searchWinSize>=3 & searchWinSize %% 2 !=0){
 
@@ -44,7 +46,7 @@ itcIMG<-function(imagery=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCrown=0.55, D
     Index[,]<-0
 
     Gnew[is.na(Gnew)]<-0
-    Gnew[Gnew<specT]<-0
+    Gnew[Gnew<th]<-0
 
     #--------Find Tree tops--------------------------------------------------------------------------------------------------
 
@@ -136,7 +138,7 @@ itcIMG<-function(imagery=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCrown=0.55, D
               filData[4,2]<-k
               filData[4,3]<-Gnew[r+1,k]
 
-              GFIL<-(filData[,3]>(rvSeed*TRESHSeed) & (filData[,3]>(rvCrown*TRESHCrown)) & (filData[,3]<=(rvSeed+(rvSeed*0.05))) & (abs(coordSeed[1]-filData[,1])<DIST) & (abs(coordSeed[2]-filData[,2])<DIST))
+              GFIL<-(filData[,3]!=0 & filData[,3]>(rvSeed*TRESHSeed) & (filData[,3]>(rvCrown*TRESHCrown)) & (filData[,3]<=(rvSeed+(rvSeed*0.05))) & (abs(coordSeed[1]-filData[,1])<DIST) & (abs(coordSeed[2]-filData[,2])<DIST))
 
               filData<-filData[GFIL,]
 
@@ -183,15 +185,21 @@ itcIMG<-function(imagery=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCrown=0.55, D
 
       HyperCrowns<-m3.shp[m3.shp@data[,1]!=0,]
 
+      HyperCrowns$X<-round(coordinates(HyperCrowns)[,1],2)
+      HyperCrowns$Y<-round(coordinates(HyperCrowns)[,2],2)
+
+      if (ischm==T){HyperCrowns$Height_m<-round(extract(imagery,HyperCrowns,fun=max)[,1],2)}
+
       HCbuf<-rgeos::gBuffer(HyperCrowns,width=-res(imagery)[1]/2,byid=T)
 
       ITCcv<-rgeos::gConvexHull(HCbuf,byid=T)
 
-      ITCcvSD<-sp::SpatialPolygonsDataFrame(ITCcv,data=HyperCrowns@data,match.ID=F)
+      ITCcvSD<-sp::SpatialPolygonsDataFrame(ITCcv,data=HCbuf@data,match.ID=F)
 
-      ITCcvSD$CA_m2<-unlist(lapply(ITCcvSD@polygons,function(x){methods::slot(x,"area")}))
+      ITCcvSD$CA_m2<-round(unlist(lapply(ITCcvSD@polygons,function(x){methods::slot(x,"area")})),2)
 
       ITCcvSD<-ITCcvSD[ITCcvSD$CA_m2>1,]
+      proj4string(ITCcvSD)<-sp::CRS(paste("+init=epsg:",epsg,sep=""))
 
       if (exists("ITCcvSD")){
 

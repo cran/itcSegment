@@ -4,7 +4,7 @@
 \alias{itcLiDAR}
 \title{Individual Tree Crowns segmentation with LiDAR data}
 \usage{
-itcLiDAR(X = NULL, Y = NULL, Z = NULL, epsg = 4326, resolution = 0.5,
+itcLiDAR(X = NULL, Y = NULL, Z = NULL, epsg = NULL, resolution = 0.5,
   MinSearchFilSize = 3, MaxSearchFilSize = 7, TRESHSeed = 0.55,
   TRESHCrown = 0.6, minDIST = 5, maxDIST = 40, HeightThreshold = 2)
 }
@@ -15,7 +15,7 @@ itcLiDAR(X = NULL, Y = NULL, Z = NULL, epsg = 4326, resolution = 0.5,
 
 \item{Z}{A column vector of z coordinates (it must have the same length as X). Z must be normalized respect to the ground.}
 
-\item{epsg}{The EPSG code of the reference system of the X,Y coordinates. Default: 4326 (lat long WGS 84)}
+\item{epsg}{The EPSG code of the reference system of the X,Y coordinates.}
 
 \item{resolution}{The resolution of the raster on which the first segmentation is carried out.}
 
@@ -34,7 +34,7 @@ itcLiDAR(X = NULL, Y = NULL, Z = NULL, epsg = 4326, resolution = 0.5,
 \item{HeightThreshold}{Minimum height of the trees.}
 }
 \value{
-An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in sqaure meters (CA_m2).
+An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in square meters (CA_m2).
 }
 \description{
 The ITC delineation approach finds local maxima within a rasterized canopy height model (CHM), designates these as tree tops, then uses a decision tree method to grow individual crowns around the local maxima. The approach goes through the following steps: (1) a low-pass filter is applied to the rasterized CHM to smooth the surface and reduce the number of local maxima; (2) local maxima are located using a moving window with size that adapts inside a user defined range (minimum and maximum size) according the pixel height; a pixel of the CHM is labelled as local maxima if its z value is greater than all other z values in the window, and with z greater than some minimum height above-ground; (3) each local maximum is labelled as an 'initial region' around which a tree crown can grow; the heights of the four neighboring pixels are extracted from the CHM and these pixels are added to the region if their vertical distance from the local maximum is less than some user-defined percentage of the local-maximum height, and less than some user-defined maximum difference; this procedure is repeated for all the neighbors of cells now included in the region, and so on iteratively until no further pixels are added to the region; (4) from each region that had been identified the first-return ALS points are extracted (having first removed low elevation points), (5) a 2D convex hull is applied to these points, and the resulting polygons becomes the final ITCs.
@@ -60,6 +60,6 @@ plot(se,col=gray((max(se$Height_m)-se$Height_m)/(max(se$Height_m)-min(se$Height_
 Michele Dalponte
 }
 \references{
-M. Dalponte, F. Reyes, K. Kandare, and D. Gianelle, "Delineation of Individual Tree Crowns from ALS and Hyperspectral data: a comparison among four methods," European Journal of Remote Sensing, Vol. 48, pp. 365-382, 2015.
+M. Dalponte, and D. A. Coomes, "Tree-centric mapping of forest carbon density from airborne laser scanning and hyperspectral data," Methods in Ecology and Evolution, doi: 10.1111/2041-210X.12575
 }
 
