@@ -138,7 +138,7 @@ itcIMG<-function(imagery=NULL,epsg=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCro
               filData[4,2]<-k
               filData[4,3]<-Gnew[r+1,k]
 
-              GFIL<-(filData[,3]!=0 & filData[,3]>(rvSeed*TRESHSeed) & (filData[,3]>(rvCrown*TRESHCrown)) & (filData[,3]<=(rvSeed+(rvSeed*0.05))) & (abs(coordSeed[1]-filData[,1])<DIST) & (abs(coordSeed[2]-filData[,2])<DIST))
+              GFIL<-(filData[,3]!=0 & filData[,3]>(rvSeed*TRESHSeed) & (filData[,3]>(rvCrown*TRESHCrown)) & (filData[,3]<=(rvSeed+(rvSeed*0.05))) & (sqrt((coordSeed[1]-filData[,1])^2 + (coordSeed[2]-filData[,2])^2)<DIST))
 
               filData<-filData[GFIL,]
 

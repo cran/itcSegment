@@ -2,6 +2,7 @@
 
 export(itcIMG)
 export(itcLiDAR)
+export(itcLiDARallo)
 import(grDevices)
 import(maptools)
 import(methods)
