@@ -6,7 +6,7 @@
 \usage{
 itcLiDARallo(X = NULL, Y = NULL, Z = NULL, epsg = NULL,
   resolution = 0.5, TRESHSeed = 0.55, TRESHCrown = 0.6,
-  HeightThreshold = 2, lut = NULL)
+  HeightThreshold = 2, lut = NULL, cw = 1)
 }
 \arguments{
 \item{X}{A column vector of x coordinates.}
@@ -26,6 +26,8 @@ itcLiDARallo(X = NULL, Y = NULL, Z = NULL, epsg = NULL,
 \item{HeightThreshold}{Minimum height of the trees.}
 
 \item{lut}{Look up table. It should be made of two colums. The first column indicate the height in meters and the second the crown diameter in meters.}
+
+\item{cw}{Weighting exponent used to increase the contrast in the CHM used to detect the local maxima (default cw=1).}
 }
 \value{
 An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in square meters (CA_m2).

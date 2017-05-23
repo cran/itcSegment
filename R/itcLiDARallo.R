@@ -10,6 +10,7 @@
 #' @param TRESHCrown Growing threshold 2. It should be between 0 and 1.
 #' @param HeightThreshold Minimum height of the trees.
 #' @param lut Look up table. It should be made of two colums. The first column indicate the height in meters and the second the crown diameter in meters.
+#' @param cw Weighting exponent used to increase the contrast in the CHM used to detect the local maxima (default cw=1).
 #' @return An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in square meters (CA_m2).
 #' @import sp
 #' @import raster
@@ -45,7 +46,7 @@
 #'
 #' }
 
-itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSeed=0.55,TRESHCrown=0.6,HeightThreshold=2,lut=NULL){
+itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSeed=0.55,TRESHCrown=0.6,HeightThreshold=2,lut=NULL,cw=1){
 
   filtro<-function(x){
     if (is.na(x[5])){
@@ -144,7 +145,7 @@ itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSee
                 H <- raster::focal(H, w=matrix(1,3,3), fun=filtro)
               }
 
-              H <- raster::focal(H, w=matrix(1,3,3), fun=function(x){mean(x,na.rm=T)})
+              H <- raster::focal(H, w=matrix(1,3,3), fun=function(x){mean(x^cw,na.rm=T)})
 
               MinSearchFilSize<-3
 
