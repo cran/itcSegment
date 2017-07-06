@@ -19,4 +19,3 @@ A dataset containing the X Y Z coordinates of LiDAR points acquired over a fores
 }
 }
 \keyword{datasets}
-

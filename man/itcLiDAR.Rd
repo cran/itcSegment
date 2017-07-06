@@ -59,10 +59,9 @@ plot(se,col=gray((max(se$Height_m)-se$Height_m)/(max(se$Height_m)-min(se$Height_
 
 }
 }
+\references{
+M. Dalponte, and D. A. Coomes, "Tree-centric mapping of forest carbon density from airborne laser scanning and hyperspectral data," Methods in Ecology and Evolution, Vol. 7, No. 10, pp. 1236-1245, 2016.
+}
 \author{
 Michele Dalponte
 }
-\references{
-M. Dalponte, and D. A. Coomes, "Tree-centric mapping of forest carbon density from airborne laser scanning and hyperspectral data," Methods in Ecology and Evolution, doi: 10.1111/2041-210X.12575
-}
-

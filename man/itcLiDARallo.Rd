@@ -61,10 +61,9 @@ plot(se,col=gray((max(se$Height_m)-se$Height_m)/(max(se$Height_m)-min(se$Height_
 
 }
 }
+\references{
+D. A. Coomes, M. Dalponte, T. Jucker, G. P. Asner, L. F. Banin, D. F.R.P. Burslem, S. L. Lewis, R. Nilus, O. L. Phillips, M.-H. Phua, L. Qie, "Area-based vs tree-centric approaches to mapping forest carbon in Southeast Asian forests from airborne laser scanning data," Remote Sensing of Environment, Vol. 194, Issue 1, pp. 77-88, June 2017.
+}
 \author{
 Michele Dalponte
 }
-\references{
-M. Dalponte, and D. A. Coomes, "Tree-centric mapping of forest carbon density from airborne laser scanning and hyperspectral data," Methods in Ecology and Evolution, doi: 10.1111/2041-210X.12575
-}
-

@@ -38,7 +38,7 @@
 #'
 agb<-function(H=NULL,CA=NULL,species=1){
 
-  d=NULL
+  dd=NULL
 
   par=matrix(2,3,data=c(1,0.093,-0.223,2,0,0),byrow=T)
   par<-data.frame(par)

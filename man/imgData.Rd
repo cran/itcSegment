@@ -17,4 +17,3 @@ A dataset containing a band (at 812 nm) of an hyperspectral image acquired over 
 }
 }
 \keyword{datasets}
-

@@ -42,10 +42,9 @@ plot(se,axes=T)
 
 }
 }
-\author{
-Michele Dalponte
-}
 \references{
 M. Dalponte, F. Reyes, K. Kandare, and D. Gianelle, "Delineation of Individual Tree Crowns from ALS and Hyperspectral data: a comparison among four methods," European Journal of Remote Sensing, Vol. 48, pp. 365-382, 2015.
 }
-
+\author{
+Michele Dalponte
+}
