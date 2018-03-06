@@ -112,6 +112,30 @@ itcLiDAR<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL , resolution=0.5, MinSearchFi
     thresh
   }
 
+  apply_otsu<-function(x){
+
+    MaxPoints<-300
+    he<-0
+    if (length(x)>MaxPoints){
+      he<-sort(x)[seq(1,length(x),ceiling(length(x)/MaxPoints))]
+    }else{
+      he<-x
+    }
+
+    if (length(unique(he))>3){
+      OT<-otsu(he)
+    }else{
+      OT<-0
+    }
+
+    if (length(he[he>OT])<10){
+      OT<-0
+    }
+
+    return(OT)
+
+  }
+
   if (MinSearchFilSize>=3 & MaxSearchFilSize>=3){
 
     if (MinSearchFilSize %% 2 != 0){
@@ -347,85 +371,51 @@ itcLiDAR<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL , resolution=0.5, MinSearchFi
 
                     LASsp<-sp::SpatialPoints(LAS1[,c(1,2)],proj4string=CRS(paste("+init=epsg:",epsg,sep="")))
 
-                    initializator<-1
-                    uid<-1
+                    o = sp::over(LASsp,ITCoriginal)
 
-                    for (indexITC in 1: dim(ITCoriginal)[1]){
+                    LAS1$ID<-o$value
 
-                      o = sp::over(LASsp,ITCoriginal[indexITC,])
-                      LF<-LAS1[!is.na(o$value) & LAS1$Z>HeightThreshold,]
+                    LF<-LAS1[!is.na(LAS1$ID) & LAS1$Z>HeightThreshold,]
 
-                      if(dim(LF)[1]>2){
+                    OT<-aggregate(LF$Z,list(LF$ID),apply_otsu)
 
-                        if (length(unique(LF$Z))>1){
+                    LF1<-split(LF, LF$ID)
 
-                          MaxPoints<-300
-                          he<-0
-                          if (length(LF$Z)>MaxPoints){
-                            he<-sort(LF$Z)[seq(1,length(LF$Z),ceiling(length(LF$Z)/MaxPoints))]
-                          }else{
-                            he<-LF$Z
-                          }
+                    LF2<-lapply(LF1,function(x){x[x$Z>OT$x[OT$Group.1==unique(x$ID)],]})
 
-                          if (length(unique(he))>3){
-                            OT<-otsu(he)
-                          }else{
-                            OT<-0
-                          }
+                    NN<-lapply(LF2,function(x){dim(x)[1]})
 
-                          if (length(he[he>OT])<10){
-                            OT<-0
-                          }
+                    LF2<-LF2[unlist(NN)>5]
 
-                          LF2<-0
-                          LF2<-LF[LF$Z>=OT,]
+                    if (length(LF2)>0){
 
-                          x<-0
-                          x<-grDevices::chull(LF2[,c(1,2)])
+                      CH<-lapply(LF2,function(x){grDevices::chull(x[,c(1,2)])})
 
-                          p<-0
-                          p<-sp::Polygon(LF2[c(x,x[1]),c(1,2)],hole=FALSE)
+                      p<-0
+                      p<-lapply(LF2,function(x){sp::Polygon(x[c(CH[names(CH)==unique(x$ID)][[1]],CH[names(CH)==unique(x$ID)][[1]][1]),c(1,2)],hole=FALSE)})
 
-                          sp2<-0
-                          sp2 = sp::SpatialPolygons( list( Polygons(list(p), 1)))
+                      MM<-lapply(LF2,function(x){x[which.max(x$Z),]})
 
-                          dat<-0
-                          dat<-base::as.data.frame(ITCoriginal@data[indexITC,])
-                          row.names(dat)<-1
-                          names(dat)<-"ID"
+                      MM<-do.call(rbind,MM)
+                      names(MM)<-c("X","Y","Height_m","ID")
 
-                          dat$X<-LF2$X[which.max(LF2$Z)]
-                          dat$Y<-LF2$Y[which.max(LF2$Z)]
-                          dat$Height_m<-max(LF2$Z)
-                          dat$CA_m2<-methods::slot(sp2@polygons[[1]],"area")
+                      sp2<-0
+                      sp2 = sp::SpatialPolygons(list(Polygons(p, 1)))
 
-                          spf<-0
-                          spf<-sp::SpatialPolygonsDataFrame(sp2,data=dat)
+                      spdf<-0
+                      spdf = sp::SpatialPolygonsDataFrame(disaggregate(sp2),data=MM, match.ID = F)
 
-                          proj4string(spf)<-sp::CRS(paste("+init=epsg:",epsg,sep=""))
+                      spdf$CA_m2<-as.numeric(rgeos::gArea(spdf,byid=T))
 
-                          if (initializator==1){
-                            poly.data<-spf
-                            n <- length(methods::slot(poly.data, "polygons"))
-                            poly.data <- sp::spChFIDs(poly.data, as.character(uid:(uid+n-1)))
-                            uid <- uid + n
-                            initializator<-0
-                          }else{
-                            n <- length(slot(spf, "polygons"))
-                            spf <- sp::spChFIDs(spf, as.character(uid:(uid+n-1)))
-                            uid <- uid + n
-                            poly.data <- maptools::spRbind(poly.data,spf)
-                          }
-                        }
-                      }
-                    }
-
-                    if (exists("poly.data")){
-
-                      return<-poly.data[,-1]
+                      proj4string(spdf)<-sp::CRS(paste("+init=epsg:",epsg,sep=""))
 
                     }
 
+                    if (exists("spdf")){
+
+                      return<-spdf
+
+                    }
                   }
                 }
 
