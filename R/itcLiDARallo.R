@@ -403,7 +403,7 @@ itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSee
                       sp2 = sp::SpatialPolygons(list(Polygons(p, 1)))
 
                       spdf<-0
-                      spdf = sp::SpatialPolygonsDataFrame(disaggregate(sp2),data=MM)
+                      spdf = sp::SpatialPolygonsDataFrame(disaggregate(sp2),data=MM,match.ID = F)
 
                       spdf$CA_m2<-as.numeric(rgeos::gArea(spdf,byid=T))
 
@@ -431,7 +431,7 @@ itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSee
           }
   else{
 
-    stop("ERROR: MaxSearchFilSize or MisSerchFilSize smaller than 3")
+    stop("ERROR: look-up table is missing or is incorrect")
 
   }
 
