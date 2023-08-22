@@ -4,7 +4,9 @@
 \name{lasData}
 \alias{lasData}
 \title{LiDAR data point cloud acquired over a forest area}
-\format{A data frame with 16907 rows and 3 variables}
+\format{
+A data frame with 16907 rows and 3 variables
+}
 \usage{
 data(lasData)
 }

@@ -11,13 +11,8 @@
 #' @param HeightThreshold Minimum height of the trees.
 #' @param lut Look up table. It should be made of two colums. The first column indicate the height in meters and the second the crown diameter in meters.
 #' @param cw Weighting exponent used to increase the contrast in the CHM used to detect the local maxima (default cw=1).
-#' @return An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in square meters (CA_m2).
-#' @import sp
-#' @import raster
-#' @import maptools
-#' @import rgeos
-#' @import methods
-#' @import grDevices
+#' @return An object of the class SpatVector containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m) and its crown area in square meters (CA_m2).
+#' @import terra
 #' @export itcLiDARallo
 #' @references D. A. Coomes, M. Dalponte, T. Jucker, G. P. Asner, L. F. Banin, D. F.R.P. Burslem, S. L. Lewis, R. Nilus, O. L. Phillips, M.-H. Phua, L. Qie, "Area-based vs tree-centric approaches to mapping forest carbon in Southeast Asian forests from airborne laser scanning data," Remote Sensing of Environment, Vol. 194, Issue 1, pp. 77-88, June 2017.
 #' @examples
@@ -118,30 +113,6 @@ itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSee
     thresh
   }
 
-  apply_otsu<-function(x){
-
-    MaxPoints<-300
-    he<-0
-    if (length(x)>MaxPoints){
-      he<-sort(x)[seq(1,length(x),ceiling(length(x)/MaxPoints))]
-    }else{
-      he<-x
-    }
-
-    if (length(unique(he))>3){
-      OT<-otsu(he)
-    }else{
-      OT<-0
-    }
-
-    if (length(he[he>OT])<10){
-      OT<-0
-    }
-
-    return(OT)
-
-  }
-
   if (!is.null(lut)){
 
             if (length(X)==length(Y) & length(X)==length(Z)){
@@ -158,25 +129,30 @@ itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSee
               stepsSearchFilSize<-lut[,2]
               thSearchFilSize<-lut[,1]
 
-              HH<-raster::raster(res=resolution,xmn=min(X),xmx=max(X),ymn=min(Y),ymx=max(Y))
-              proj4string(HH)<-sp::CRS(paste("+init=epsg:",epsg,sep=""))
-              H<-raster::rasterize(sp::SpatialPoints(LAS1[,c(1,2)]),field=LAS1$Z,HH,fun=function(x,...){max(x,na.rm=T)})
+              HH<-terra::rast(resolution=resolution,xmin=min(X),xmax=max(X),ymin=min(Y),ymax=max(Y))
+              terra::crs(HH)<-paste("epsg:",epsg,sep="")
+             
+              LAS1_vect<-terra::vect(as.matrix(LAS1[,c(1,2)]))
+              terra::crs(LAS1_vect)<-paste("epsg:",epsg,sep="")
+              LAS1_vect$Z<-LAS1$Z
+              
+              H<-terra::rasterize(x=LAS1_vect,y=HH,field="Z",fun=function(x,...){max(x,na.rm=T)})
 
               MOD<-1
 
               while(MOD==1){
                 MOD<-0
-                H <- raster::focal(H, w=matrix(1,3,3), fun=filtro)
+                H <- terra::focal(H, w=matrix(1,3,3), fun=filtro)
               }
 
-              H <- raster::focal(H, w=matrix(1,3,3), fun=function(x){mean(x^cw,na.rm=T)})
+              H <- terra::focal(H, w=matrix(1,3,3), fun=function(x){mean(x^cw,na.rm=T)})
 
               MinSearchFilSize<-3
 
               rm(MOD)
               gc()
 
-              if (ncell(H)!=length(which(slot(is.na(H)@data,"values")))){
+              if (ncell(H)!=length(which(values(is.na(H))))){
 
                 Max<-matrix(dim(H)[2],dim(H)[1],data=H[,],byrow=FALSE)
 
@@ -356,64 +332,76 @@ itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSee
 
                     #----------------Write Shapefile----------------------------------------------------------------------------------
 
-                    m2 <- methods::as(Cb, "SpatialGridDataFrame")
-                    m3 <- raster::raster(m2, layer = 1)  # Convert soil classes to raster
-
                     # Convert to polygons
-                    m3.shp <- raster::rasterToPolygons(m3, fun = ,dissolve=TRUE)
-                    names(m3.shp@data)<-"value"
-
-                    ITCoriginal<-m3.shp[m3.shp@data[,1]!=0,]
+                    m3.shp <- terra::as.polygons(Cb)
+                    names(m3.shp)<-"ID"
+              
+                    ITCoriginal<-terra::subset(m3.shp,m3.shp$ID!=0)
 
                     #------------------------------------------------
 
                     ITC<-ITCoriginal
 
-                    LASsp<-sp::SpatialPoints(LAS1[,c(1,2)],proj4string=CRS(paste("+init=epsg:",epsg,sep="")))
+                    LASsp<-terra::vect(as.matrix(LAS1[,c(1,2)]))
+                    terra::crs(LASsp)<-paste("epsg:",epsg,sep="")
+                    
+                    initializator<-1
+                    uid<-1
 
-                    o = sp::over(LASsp,ITCoriginal)
+                    for (indexITC in 1: dim(ITCoriginal)[1]){
 
-                    LAS1$ID<-o$value
+                      o <- relate(ITCoriginal[indexITC,], LASsp, "intersects")[1,]
 
-                    LF<-LAS1[!is.na(LAS1$ID) & LAS1$Z>HeightThreshold,]
+                      LF<-LAS1[o==T & LAS1$Z>HeightThreshold,]
 
-                    OT<-aggregate(LF$Z,list(LF$ID),apply_otsu)
+                      if(dim(LF)[1]>2){
 
-                    LF1<-split(LF, LF$ID)
+                        if (length(unique(LF$Z))>1){
 
-                    LF2<-lapply(LF1,function(x){x[x$Z>OT$x[OT$Group.1==unique(x$ID)],]})
+                          MaxPoints<-300
+                          he<-0
+                          if (length(LF$Z)>MaxPoints){
+                            he<-sort(LF$Z)[seq(1,length(LF$Z),ceiling(length(LF$Z)/MaxPoints))]
+                          }else{
+                            he<-LF$Z
+                          }
 
-                    NN<-lapply(LF2,function(x){dim(x)[1]})
+                          if (length(unique(he))>3){
+                            OT<-otsu(he)
+                          }else{
+                            OT<-0
+                          }
 
-                    LF2<-LF2[unlist(NN)>5]
+                          if (length(he[he>OT])<10){
+                            OT<-0
+                          }
 
-                    if (length(LF2)>0){
+                          LF2<-0
+                          LF2<-LF[LF$Z>=OT,]
 
-                      CH<-lapply(LF2,function(x){grDevices::chull(x[,c(1,2)])})
+                          sp2<-0
+                          sp2<-terra::convHull(vect(as.matrix(LF2[,c(1,2)])))
+                          terra::crs(sp2)<-paste("epsg:",epsg,sep="")
 
-                      p<-0
-                      p<-lapply(LF2,function(x){sp::Polygon(x[c(CH[names(CH)==unique(x$ID)][[1]],CH[names(CH)==unique(x$ID)][[1]][1]),c(1,2)],hole=FALSE)})
+                          sp2$ID<-ITCoriginal$ID[indexITC]
+                          sp2$X<-LF2$X[which.max(LF2$Z)]
+                          sp2$Y<-LF2$Y[which.max(LF2$Z)]
+                          sp2$Height_m<-max(LF2$Z)
+                          sp2$CA_m2<-round(terra::expanse(sp2, unit="m"),2)
 
-                      MM<-lapply(LF2,function(x){x[which.max(x$Z),]})
-
-                      MM<-do.call(rbind,MM)
-                      names(MM)<-c("X","Y","Height_m","ID")
-
-                      sp2<-0
-                      sp2 = sp::SpatialPolygons(list(Polygons(p, 1)))
-
-                      spdf<-0
-                      spdf = sp::SpatialPolygonsDataFrame(disaggregate(sp2),data=MM,match.ID = F)
-
-                      spdf$CA_m2<-as.numeric(rgeos::gArea(spdf,byid=T))
-
-                      proj4string(spdf)<-sp::CRS(paste("+init=epsg:",epsg,sep=""))
-
+                          if (initializator==1){
+                            poly.data<-sp2
+                            initializator<-0
+                          }else{
+                            poly.data <- rbind(poly.data,sp2)
+                          }
+                        }
+                      }
                     }
 
-                    if (exists("spdf")){
+                    if (exists("poly.data")){
 
-                      return<-spdf
+                      return<-poly.data[,-1]
 
                     }
 
@@ -431,12 +419,11 @@ itcLiDARallo<-function(X=NULL,Y=NULL,Z=NULL, epsg=NULL, resolution=0.5, TRESHSee
           }
   else{
 
-    stop("ERROR: look-up table is missing or is incorrect")
+    stop("ERROR: MaxSearchFilSize or MisSerchFilSize smaller than 3")
 
   }
 
 }
-
 
 
 

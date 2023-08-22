@@ -9,18 +9,16 @@
 #' @param DIST Maximum value of the crown diameter of a detected tree (in meters).
 #' @param th Digital number value below which a pixel cannot be a local maxima.
 #' @param ischm TRUE if the imagery is a Canopy Height Model (CHM). Default: FALSE.
-#' @return An object of the class SpatialPolygonsDataFrame containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m;  only if ischm=TRUE) and its crown area in square meters (CA_m2).
-#' @import sp
-#' @import raster
-#' @import maptools
-#' @import rgeos
-#' @import methods
-#' @import grDevices
+#' @return An object of the class SpatVector containing the delineated ITCs. The informaion for each ITC contained in the data frame are the X and Y coordinates position of the tree, the tree height in meters (Height_m;  only if ischm=TRUE) and its crown area in square meters (CA_m2).
+#' @import terra
 #' @export itcIMG
 #' @references M. Dalponte, F. Reyes, K. Kandare, and D. Gianelle, "Delineation of Individual Tree Crowns from ALS and Hyperspectral data: a comparison among four methods," European Journal of Remote Sensing, Vol. 48, pp. 365-382, 2015.
 #' @examples
 #' \dontrun{
-#' data(imgData)
+#' library(terra)
+#' library(itcSegment)
+#'
+#' imgData<-rast("./inst/extdata/imgData.tif")
 #'
 #' se<-itcIMG(imgData,epsg=32632)
 #' summary(se)
@@ -34,7 +32,7 @@ itcIMG<-function(imagery=NULL,epsg=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCro
 
   if (searchWinSize>=3 & searchWinSize %% 2 !=0){
 
-    imagery <- raster::focal(imagery, w=matrix(1,3,3), fun=function(x){mean(x,na.rm=T)})
+    imagery <- terra::focal(imagery, w=matrix(1,3,3), fun=function(x){mean(x,na.rm=T)})
 
     Max<-matrix(dim(imagery)[2],dim(imagery)[1],data=imagery[,],byrow=FALSE)
 
@@ -176,34 +174,33 @@ itcIMG<-function(imagery=NULL,epsg=NULL,searchWinSize=3,TRESHSeed=0.45, TRESHCro
 
       #----------------Write Shapefile----------------------------------------------------------------------------------
 
-      m2 <- methods::as(Cb, "SpatialGridDataFrame")
-      m3 <- raster::raster(m2, layer = 1)  # Convert soil classes to raster
-
       # Convert to polygons
-      m3.shp <- raster::rasterToPolygons(m3, fun = ,dissolve=TRUE)
-      names(m3.shp@data)<-"value"
+      m3.shp <- terra::as.polygons(Cb)
+      names(m3.shp)<-"ID"
 
-      HyperCrowns<-m3.shp[m3.shp@data[,1]!=0,]
+      HyperCrowns<-terra::subset(m3.shp,m3.shp$ID!=0)
 
-      HyperCrowns$X<-round(coordinates(HyperCrowns)[,1],2)
-      HyperCrowns$Y<-round(coordinates(HyperCrowns)[,2],2)
+      HyperCrowns$X<-round(terra::geom(HyperCrowns)[,3],2)
+      HyperCrowns$Y<-round(terra::geom(HyperCrowns)[,4],2)
 
-      if (ischm==T){HyperCrowns$Height_m<-round(extract(imagery,HyperCrowns,fun=max)[,1],2)}
+      if (ischm==T){HyperCrowns$Height_m<-round(terra::extract(imagery,HyperCrowns,fun=max)[,1],2)}
 
-      HCbuf<-rgeos::gBuffer(HyperCrowns,width=-res(imagery)[1]/2,byid=T)
+      HCbuf<-terra::buffer(HyperCrowns,width=-res(imagery)[1]/2)
 
-      ITCcv<-rgeos::gConvexHull(HCbuf,byid=T)
+      ITCcv<-terra::convHull(HCbuf,by="ID")
 
-      ITCcvSD<-sp::SpatialPolygonsDataFrame(ITCcv,data=HCbuf@data,match.ID=F)
+      ITCcv$X<-HCbuf$X
+      ITCcv$Y<-HCbuf$Y
+      if (ischm==T){ITCcv$Height_m<-HCbuf$Height_m}
 
-      ITCcvSD$CA_m2<-round(unlist(lapply(ITCcvSD@polygons,function(x){methods::slot(x,"area")})),2)
+      ITCcv$CA_m2<-round(terra::expanse(ITCcv, unit="m"),2)
 
-      ITCcvSD<-ITCcvSD[ITCcvSD$CA_m2>1,]
-      proj4string(ITCcvSD)<-sp::CRS(paste("+init=epsg:",epsg,sep=""))
+      ITCcv<-terra::subset(ITCcv,ITCcv$CA_m2>1)
+      crs(ITCcv)  <- paste("epsg:",epsg,sep="")
 
-      if (exists("ITCcvSD")){
+      if (exists("ITCcv")){
 
-        return<-ITCcvSD[,-1]
+        return<-ITCcv
 
       }
 
